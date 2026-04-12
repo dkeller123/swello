@@ -316,8 +316,8 @@ function tideHTML(tide) {
       <span class="tide-range">${rangeStr}</span>
     </div>
     <div class="tide-next">
-      <span class="tide-next-item"><span class="tide-next-lbl">↑ High</span> <span class="tide-next-val">${nextHighStr}</span></span>
-      <span class="tide-next-item"><span class="tide-next-lbl">↓ Low</span> <span class="tide-next-val">${nextLowStr}</span></span>
+      <span class="tide-next-item"><span class="tide-next-lbl">Next high</span> <span class="tide-next-val">${nextHighStr}</span></span>
+      <span class="tide-next-item"><span class="tide-next-lbl">Next low</span> <span class="tide-next-val">${nextLowStr}</span></span>
     </div>
   </div>`;
 }

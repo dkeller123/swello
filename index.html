@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swello — Find your best wave</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ocean:#0a7c5c; --ocean-light:#1D9E75; --ocean-pale:#e1f5ee;
+    --foam:#f5f9f7;  --sand:#faf8f4;        --dusk:#0d1f1a;
+    --mist:#6b8c83;  --wave:#b2ddd1;        --accent:#ff6b35;
+    --text:#0d1f1a;  --text-muted:#4a6b62;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--sand);color:var(--text);overflow-x:hidden;}
+
+  /* ── NAV ── */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.25rem 2.5rem;background:rgba(245,249,247,0.88);backdrop-filter:blur(12px);border-bottom:1px solid rgba(10,124,92,0.1);}
+  .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--ocean);letter-spacing:-0.02em;}
+  .logo span{color:var(--accent);}
+  .nav-btn{background:var(--ocean);color:#fff;border:none;border-radius:50px;padding:0.6rem 1.4rem;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;cursor:pointer;transition:background 0.2s;}
+  .nav-btn:hover{background:var(--ocean-light);}
+  .btn-ghost{background:transparent;color:var(--text-muted);border:1.5px solid var(--wave);border-radius:50px;padding:0.5rem 1.1rem;font-family:'DM Sans',sans-serif;font-size:0.85rem;cursor:pointer;transition:all 0.2s;}
+  .btn-ghost:hover{border-color:var(--ocean);color:var(--ocean);}
+
+  /* ── HERO ── */
+  .hero{min-height:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:7rem 2rem 3rem;position:relative;overflow:hidden;}
+  .hero-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse 80% 60% at 50% 120%,rgba(10,124,92,0.18) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 80% 20%,rgba(178,221,209,0.3) 0%,transparent 60%);}
+  .hero-content{position:relative;z-index:2;max-width:960px;width:100%;}
+  .hero h1{font-family:'Syne',sans-serif;font-size:clamp(1.3rem,3vw,2.4rem);font-weight:800;line-height:1.3;letter-spacing:-0.02em;color:var(--dusk);margin-bottom:0.75rem;animation:fadeUp 0.6s 0.1s ease both;white-space:nowrap;}
+  .hero h1 em{font-style:normal;color:var(--ocean-light);}
+  .hero p{font-size:1.1rem;color:var(--text-muted);line-height:1.7;max-width:600px;margin:0 auto 2rem;font-weight:300;animation:fadeUp 0.6s 0.2s ease both;}
+
+  /* ── APP CARD ── */
+  .app-card{background:#fff;border:1px solid rgba(10,124,92,0.12);border-radius:28px;overflow:hidden;box-shadow:0 8px 48px rgba(10,124,92,0.08);text-align:left;}
+  .app-header{background:var(--dusk);padding:2rem 2.5rem;color:#fff;}
+  .app-header h2{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:0.3rem;}
+  .app-header>p{font-size:0.88rem;color:var(--wave);font-weight:300;margin-bottom:1.5rem;}
+
+  /* ── LOCATION INPUT + AUTOCOMPLETE ── */
+  .location-row{display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:0.6rem;}
+  .loc-input-wrap{flex:1;min-width:200px;position:relative;}
+  .loc-input-wrap input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:10px;color:#fff;padding:0.75rem 1rem 0.75rem 2.5rem;font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;transition:border 0.2s;height:46px;}
+  .loc-input-wrap input::placeholder{color:rgba(255,255,255,0.35);}
+  .loc-input-wrap input:focus{border-color:var(--ocean-light);}
+  .loc-icon{position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);font-size:1rem;pointer-events:none;}
+  .autocomplete-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#162e27;border:1px solid rgba(255,255,255,0.15);border-radius:12px;overflow:hidden;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.4);display:none;}
+  .autocomplete-dropdown.open{display:block;}
+  .ac-item{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;cursor:pointer;transition:background 0.12s;border-bottom:1px solid rgba(255,255,255,0.06);}
+  .ac-item:last-child{border-bottom:none;}
+  .ac-item:hover,.ac-item.active{background:rgba(29,158,117,0.25);}
+  .ac-icon{font-size:0.9rem;opacity:0.6;flex-shrink:0;}
+  .ac-name{font-size:0.9rem;color:#fff;font-weight:500;}
+  .ac-sub{font-size:0.78rem;color:rgba(178,221,209,0.7);margin-top:1px;}
+  .ac-spinner{padding:0.75rem 1rem;font-size:0.85rem;color:rgba(178,221,209,0.6);display:flex;align-items:center;gap:0.5rem;}
+  .ac-spinner-dot{width:6px;height:6px;border-radius:50%;background:var(--ocean-light);animation:pulse 1s ease infinite;}
+
+  .gps-btn{flex-shrink:0;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:#fff;padding:0 1.1rem;font-family:'DM Sans',sans-serif;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.2s;display:flex;align-items:center;gap:0.4rem;height:46px;}
+  .gps-btn:hover{background:rgba(255,255,255,0.18);border-color:var(--ocean-light);}
+  .gps-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .gps-status{font-size:0.78rem;color:rgba(178,221,209,0.8);min-height:1.1rem;margin-bottom:1rem;}
+
+  /* ── OPTIONS ROW ── */
+  .options-row{display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;}
+  .form-group{display:flex;flex-direction:column;gap:0.35rem;}
+  .form-group label{font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--wave);font-weight:500;}
+  .form-group select{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:10px;color:#fff;padding:0.6rem 1rem;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;cursor:pointer;height:42px;}
+  .form-group select option{background:#0d1f1a;}
+  .search-btn{background:var(--ocean-light);color:#fff;border:none;border-radius:10px;padding:0 1.75rem;font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;height:42px;}
+  .search-btn:hover{background:#25c48f;}
+  .search-btn:disabled{opacity:0.6;cursor:not-allowed;}
+
+  /* ── RESULTS ── */
+  .results-area{padding:1.75rem 2.5rem 2rem;}
+  .results-empty{text-align:center;padding:3.5rem 1rem;color:var(--mist);}
+  .results-empty .big-icon{font-size:3rem;margin-bottom:1rem;opacity:0.4;}
+  .results-empty p{font-size:0.95rem;line-height:1.7;}
+  .results-meta{margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;}
+  .results-meta h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--dusk);}
+  .results-meta-right{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+  .results-meta-right span{font-size:0.82rem;color:var(--mist);}
+
+  /* ── TIER LABELS ── */
+  .tier-label{font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:1.5rem 0 0.75rem;padding:0.3rem 0;border-bottom:1.5px solid;display:flex;align-items:center;gap:0.5rem;}
+  .tier-go{color:#0a7c5c;border-color:#0a7c5c;}
+  .tier-maybe{color:#b87a1a;border-color:#b87a1a;}
+  .tier-skip{color:#888;border-color:#ddd;}
+
+  /* ── SPOT CARDS ── */
+  .spot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:1rem;margin-bottom:0.5rem;}
+  .spot-card{border:1px solid rgba(10,124,92,0.12);border-radius:18px;padding:1.25rem 1.4rem;background:var(--foam);transition:all 0.2s;position:relative;overflow:hidden;}
+  .spot-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(10,124,92,0.1);}
+  .spot-card.tier-best{border-color:var(--ocean);background:#f0faf6;}
+  .spot-card.tier-avg{border-color:#e8c97a;background:#fdf9f0;}
+  .spot-card.tier-worst{border-color:#ddd;background:#f9f9f9;opacity:0.85;}
+  .spot-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.6rem;gap:0.5rem;}
+  .spot-name{font-family:'Syne',sans-serif;font-size:0.98rem;font-weight:700;color:var(--dusk);line-height:1.2;}
+  .match-badge{display:flex;align-items:center;gap:0.3rem;padding:0.3rem 0.7rem;border-radius:50px;font-size:0.7rem;font-weight:700;letter-spacing:0.04em;white-space:nowrap;flex-shrink:0;}
+  .match-fire{background:#0a7c5c;color:#fff;}
+  .match-good{background:#c8eede;color:#0a7c5c;}
+  .match-fair{background:#fde8d0;color:#b85c1a;}
+  .match-poor{background:#efefef;color:#888;}
+
+  /* ── CARD STATS ── */
+  .stats-row{display:flex;align-items:flex-start;gap:0.5rem;margin:0.85rem 0 0.6rem;}
+  .stat-block{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:60px;}
+  .stat-block-wide{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex:1.6;min-width:100px;}
+  .stat-lbl{font-size:0.68rem;color:var(--mist);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;align-self:center;}
+  .stat-val-line{display:flex;align-items:baseline;gap:3px;margin-top:1px;}
+  .stat-val-big{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;line-height:1;color:var(--dusk);}
+  .stat-unit{font-size:0.75rem;color:var(--text-muted);font-weight:400;}
+  .stat-sub{font-size:0.72rem;color:var(--mist);margin-top:2px;letter-spacing:0.03em;text-align:center;align-self:center;}
+  .stat-divider{width:1px;background:rgba(0,0,0,0.08);align-self:stretch;margin:0 2px;flex-shrink:0;margin-top:18px;}
+
+  /* ── WIND ── */
+  .wind-row{display:flex;align-items:center;gap:8px;margin-top:1px;}
+  .wind-compass{flex-shrink:0;width:52px;height:52px;}
+  .wind-text{display:flex;flex-direction:column;gap:2px;}
+  .wind-speed-val{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:700;color:var(--dusk);line-height:1;}
+  .wind-dir-val{font-size:0.72rem;color:var(--mist);letter-spacing:0.04em;}
+
+  /* ── TIDE ── */
+  .tide-row{display:flex;align-items:center;gap:1rem;padding:0.6rem 0.75rem;background:rgba(10,124,92,0.04);border-radius:10px;margin-bottom:0.6rem;flex-wrap:wrap;}
+  .tide-current{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+  .tide-lbl{font-size:0.68rem;color:var(--mist);text-transform:uppercase;letter-spacing:0.06em;}
+  .tide-val{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--dusk);}
+  .tide-arrow{font-size:1.1rem;font-weight:700;line-height:1;}
+  .tide-next{display:flex;flex-direction:column;gap:2px;flex:1;}
+  .tide-next-item{display:flex;align-items:center;gap:5px;font-size:0.75rem;}
+  .tide-next-lbl{color:var(--mist);flex-shrink:0;}
+  .tide-next-val{color:var(--dusk);font-weight:500;}
+  .tide-range{font-size:0.7rem;color:var(--mist);margin-left:2px;}
+
+  /* ── DISTANCE PILL (replaces Go/Maybe badge) ── */
+  .dist-pill{font-size:0.72rem;font-weight:500;color:var(--text-muted);border:1px solid rgba(0,0,0,0.12);border-radius:50px;padding:3px 10px;white-space:nowrap;flex-shrink:0;background:rgba(0,0,0,0.03);}
+
+  /* ── UNIT TOGGLE ── */
+  .unit-toggle{display:flex;align-items:center;gap:4px;font-size:0.78rem;}
+  .unit-toggle .tog{color:var(--ocean);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;font-size:inherit;}
+  .unit-toggle .tog.active{color:var(--mist);text-decoration:none;cursor:default;font-weight:500;}
+  .unit-toggle .sep{color:var(--mist);}
+
+  /* ── VERDICT ── */
+  .spot-verdict{font-size:0.8rem;line-height:1.5;color:var(--text-muted);background:rgba(10,124,92,0.05);border-radius:10px;padding:0.6rem 0.8rem;margin-top:0.75rem;}
+  .spot-verdict.verdict-good{background:rgba(10,124,92,0.07);color:#0a5c44;}
+  .spot-verdict.verdict-fair{background:rgba(232,201,122,0.15);color:#7a5a0a;}
+  .spot-verdict.verdict-poor{background:rgba(0,0,0,0.04);color:#888;}
+
+  /* ── CARD FOOTER ── */
+  .spot-footer{display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:var(--mist);margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid rgba(0,0,0,0.06);flex-wrap:wrap;gap:0.5rem;}
+  .spot-region{font-size:0.7rem;background:rgba(10,124,92,0.08);color:var(--ocean);padding:2px 8px;border-radius:50px;}
+  .spot-pill{font-size:0.72rem;font-weight:500;padding:3px 9px;border-radius:50px;white-space:nowrap;}
+
+  /* ── LOADING / ERRORS ── */
+  .loading{text-align:center;padding:3rem 1rem;}
+  .loader{width:40px;height:40px;border:3px solid var(--wave);border-top-color:var(--ocean);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;}
+  .loading p{color:var(--mist);font-size:0.9rem;}
+  .error-msg{background:#fff0ec;border:1px solid #ffc4b0;border-radius:12px;padding:1rem 1.25rem;color:#b85c1a;font-size:0.9rem;line-height:1.5;}
+  .no-results{text-align:center;padding:2.5rem;color:var(--mist);}
+  .no-results p{font-size:0.95rem;line-height:1.7;}
+
+  /* ── FEATURES SECTION ── */
+  .features-section{padding:6rem 2rem;background:var(--foam);}
+  .section-label{text-align:center;font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--mist);margin-bottom:1rem;}
+  .section-title{text-align:center;font-family:'Syne',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;color:var(--dusk);margin-bottom:3.5rem;letter-spacing:-0.02em;}
+  .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;max-width:900px;margin:0 auto;}
+  .feat-card{background:#fff;border:1px solid rgba(10,124,92,0.1);border-radius:20px;padding:2rem 1.75rem;transition:transform 0.2s,box-shadow 0.2s;}
+  .feat-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(10,124,92,0.12);}
+  .feat-icon{width:48px;height:48px;background:var(--ocean-pale);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:1.25rem;}
+  .feat-card h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:var(--dusk);margin-bottom:0.5rem;}
+  .feat-card p{font-size:0.92rem;color:var(--text-muted);line-height:1.6;}
+
+  /* ── FOOTER ── */
+  .footer-cta{background:var(--dusk);color:#fff;text-align:center;padding:5rem 2rem;}
+  .footer-cta h2{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:0.75rem;letter-spacing:-0.02em;}
+  .footer-cta p{color:var(--wave);margin-bottom:2rem;font-weight:300;}
+  .btn-primary{background:var(--ocean);color:#fff;border:none;border-radius:50px;padding:1rem 2.2rem;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:500;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 20px rgba(10,124,92,0.25);}
+  .btn-primary:hover{background:var(--ocean-light);transform:translateY(-2px);}
+  footer{background:var(--dusk);border-top:1px solid rgba(255,255,255,0.06);text-align:center;padding:1.5rem;font-size:0.8rem;color:rgba(255,255,255,0.3);}
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:600px){
+    nav{padding:1rem 1.25rem;}
+    .app-header{padding:1.5rem;}
+    .results-area{padding:1.25rem;}
+    .options-row{flex-direction:column;align-items:stretch;}
+    .search-btn{width:100%;}
+    .hero h1{white-space:normal;}
+  }
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="logo">Swell<span>o</span></div>
+  <div style="display:flex;align-items:center;gap:0.75rem;">
+    <button class="btn-ghost" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">See how it works</button>
+    <button class="nav-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">Try it free</button>
+  </div>
+</nav>
+
+<!-- ── HERO + EMBEDDED TOOL ──────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <h1>Your best wave is out there.<br><em>We'll tell you exactly where.</em></h1>
+    <p>Tell us where you are — anywhere. We'll match live swell conditions to each break's ideal profile and rank the best options within driving distance.</p>
+
+    <div class="app-card">
+      <div class="app-header">
+        <h2>Live Forecast Tool</h2>
+        <p>Start from your location or any address — we match live conditions to each break's ideal profile</p>
+
+        <div class="location-row">
+          <div class="loc-input-wrap">
+            <span class="loc-icon">🔍</span>
+            <input type="text" id="locationInput" placeholder="City, address, or zip code…" autocomplete="off" spellcheck="false"/>
+            <div class="autocomplete-dropdown" id="acDropdown"></div>
+          </div>
+          <button class="gps-btn" id="gpsBtn" onclick="useMyLocation()"><span>📡</span> Use my location</button>
+        </div>
+        <div class="gps-status" id="gpsStatus"></div>
+
+        <div class="options-row">
+          <div class="form-group">
+            <label>Drive radius</label>
+            <select id="radiusInput">
+              <option value="50">50 miles</option>
+              <option value="100" selected>100 miles</option>
+              <option value="200">200 miles</option>
+              <option value="300">300 miles</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Sort by</label>
+            <select id="sortInput">
+              <option value="match">Best match first</option>
+              <option value="distance">Closest first</option>
+            </select>
+          </div>
+          <button class="search-btn" id="searchBtn" onclick="runSearch()">Find Waves 🌊</button>
+        </div>
+      </div>
+
+      <div class="results-area" id="resultsArea">
+        <div class="results-empty">
+          <div class="big-icon">🌊</div>
+          <p>Enter your location or tap <strong>"Use my location"</strong><br>to find the best surf breaks near you.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ──────────────────────────────────────────────────────────────── -->
+<section class="features-section" id="features">
+  <p class="section-label">Why surfers love it</p>
+  <h2 class="section-title">Smart forecasting, built for surfers</h2>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📍</div>
+      <h3>Start from anywhere</h3>
+      <p>Use your GPS or type any address — even if you're miles from the coast, we'll find what's reachable.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🚗</div>
+      <h3>Set your drive radius</h3>
+      <p>Pick how far you're willing to drive. We find every surf break within that distance and rank them.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🧠</div>
+      <h3>Spot-specific matching</h3>
+      <p>Each break has an ideal conditions profile. We match live swell data to it — so you know if today is actually good <em>for that spot</em>.</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🏆</div>
+      <h3>Go / Maybe / Skip</h3>
+      <p>Clear verdicts on every spot. No guessing, no wasted drives — just better sessions.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER CTA ─────────────────────────────────────────────────────────────── -->
+<div class="footer-cta">
+  <h2>Maximize waves, minimize driving!</h2>
+  <p>Get your first forecast free — no setup, no fuss.</p>
+  <button class="btn-primary" onclick="window.scrollTo({top:0,behavior:'smooth'})">Start surfing smarter</button>
+</div>
+
+<footer>© 2026 Swello · Powered by Open-Meteo Marine API · Built for wave seekers everywhere</footer>
+
+<!-- ── SCRIPTS (order matters: spots → scoring → app) ───────────────────────── -->
+<script src="spots.js"></script>
+<script src="scoring.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

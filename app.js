@@ -9,12 +9,31 @@
 let selectedLat = null, selectedLng = null, selectedLabel = null;
 let userLat = null, userLng = null, userLocationName = null;
 let acDebounce = null, acActiveIndex = -1, acResults = [];
-let distUnit  = 'mi';
+let distUnit    = 'mi';
 let lastResults = null;
+let SURF_SPOTS  = [];   // populated from spots.json at startup
 
 // ── DOM REFS ──────────────────────────────────────────────────────────────────
 const locationInput = document.getElementById('locationInput');
 const acDropdown    = document.getElementById('acDropdown');
+
+// ── STARTUP: load JSON data files ─────────────────────────────────────────────
+(async function loadData() {
+  try {
+    const [spotsRes, configRes] = await Promise.all([
+      fetch('spots.json'),
+      fetch('scoring-config.json')
+    ]);
+    SURF_SPOTS = await spotsRes.json();
+    const config = await configRes.json();
+    initScoringConfig(config);
+    console.log(`SwellAI ready — ${SURF_SPOTS.length} surf spots loaded.`);
+  } catch (err) {
+    console.error('Failed to load data files:', err);
+    document.getElementById('resultsArea').innerHTML =
+      `<div class="error-msg">Failed to load surf spot data. Please refresh the page.</div>`;
+  }
+})();
 
 // ── AUTOCOMPLETE ──────────────────────────────────────────────────────────────
 
@@ -162,77 +181,90 @@ function mToFt(m) { return m == null ? null : m * 3.281; }
 // ── API CALLS ─────────────────────────────────────────────────────────────────
 
 async function getWaveData(lat, lng) {
-  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=wave_height,swell_wave_height,swell_wave_period,swell_wave_direction,sea_level_height_msl&forecast_days=2&timezone=auto`;
+  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=wave_height,swell_wave_height,swell_wave_period,swell_wave_direction&forecast_days=1&timezone=auto`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('no_marine');
   const d   = await res.json();
-  const now = new Date();
-  const currentHour = now.getHours();
-  const times = d.hourly?.time || [];
-
-  // Find current index
-  const idx = Math.min(currentHour, times.length - 1);
-
-  // Tide processing — find local highs and lows from sea_level_height_msl
-  const seaLevels = d.hourly?.sea_level_height_msl || [];
-  const tideData  = parseTides(seaLevels, times, idx);
-
+  const idx = Math.min(new Date().getHours(), (d.hourly?.time?.length || 1) - 1);
   return {
     waveHeight:  d.hourly?.wave_height?.[idx]          ?? null,
     swellHeight: d.hourly?.swell_wave_height?.[idx]    ?? null,
     swellPeriod: d.hourly?.swell_wave_period?.[idx]    ?? null,
     swellDir:    d.hourly?.swell_wave_direction?.[idx] ?? null,
-    tide: tideData,
   };
 }
 
-// ── TIDE PARSING ──────────────────────────────────────────────────────────────
-// The API returns sea_level_height_msl — heights relative to global mean sea
-// level, which can be negative at low tide. To show a meaningful height to a
-// surfer (like a tide chart), we normalize to height above today's minimum,
-// giving a "feet above low tide" reading that is always positive and intuitive.
+// ── NOAA TIDE DATA ────────────────────────────────────────────────────────────
+// Fetches today's high/low predictions from NOAA Tides & Currents API.
+// Heights are in feet above MLLW — the standard surfers' tide reference.
+// API docs: https://api.tidesandcurrents.noaa.gov/api/prod/
 
-function parseTides(levels, times, currentIdx) {
-  if (!levels.length || currentIdx >= levels.length) return null;
+async function getNOAATideData(noaaStationId) {
+  try {
+    // Fetch today's high/low predictions (hilo interval) in English units, MLLW datum
+    const today = new Date();
+    const dateStr = today.getFullYear().toString() +
+      String(today.getMonth()+1).padStart(2,'0') +
+      String(today.getDate()).padStart(2,'0');
 
-  // Get today's slice (first 24 values = today)
-  const todayLevels = levels.slice(0, Math.min(24, levels.length));
-  const dayMin = Math.min(...todayLevels.filter(v => v != null));
-  const dayMax = Math.max(...todayLevels.filter(v => v != null));
+    const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter` +
+      `?begin_date=${dateStr}&end_date=${dateStr}` +
+      `&station=${noaaStationId}` +
+      `&product=predictions&datum=MLLW&interval=hilo` +
+      `&units=english&time_zone=lst_ldt&format=json`;
 
-  // Normalize: height above today's low tide
-  function normalize(mslM) {
-    if (mslM == null) return null;
-    return mToFt(mslM - dayMin); // always >= 0
-  }
+    const res  = await fetch(url);
+    const data = await res.json();
 
-  const currentNorm  = normalize(levels[currentIdx]);
-  const prevLevel    = levels[Math.max(0, currentIdx - 1)];
-  const rising       = levels[currentIdx] >= prevLevel;
+    if (!data.predictions || !data.predictions.length) return null;
 
-  // Find next local high and low after current index (in raw MSL values)
-  let nextHigh = null, nextLow = null;
+    const now = new Date();
+    const predictions = data.predictions.map(p => ({
+      time: new Date(p.t),
+      ft:   parseFloat(p.v),
+      type: p.type  // 'H' or 'L'
+    }));
 
-  for (let i = currentIdx + 1; i < levels.length - 1; i++) {
-    const prev = levels[i - 1];
-    const curr = levels[i];
-    const next = levels[i + 1];
-
-    if (curr != null && prev != null && next != null) {
-      if (curr > prev && curr > next && !nextHigh) {
-        nextHigh = { time: times[i], ft: normalize(curr) };
-      }
-      if (curr < prev && curr < next && !nextLow) {
-        nextLow  = { time: times[i], ft: normalize(curr) };
+    // Find the two predictions that bracket now (prev and next)
+    let prev = null, nextHigh = null, nextLow = null;
+    for (let i = 0; i < predictions.length; i++) {
+      if (predictions[i].time <= now) {
+        prev = predictions[i];
+      } else {
+        // This prediction is in the future
+        if (!nextHigh && predictions[i].type === 'H') nextHigh = predictions[i];
+        if (!nextLow  && predictions[i].type === 'L') nextLow  = predictions[i];
       }
     }
-    if (nextHigh && nextLow) break;
+
+    // Determine current tide height by linear interpolation between prev and next event
+    const allFuture = predictions.filter(p => p.time > now);
+    const nextEvent = allFuture.length ? allFuture[0] : null;
+
+    let currentFt = null;
+    let rising     = false;
+
+    if (prev && nextEvent) {
+      const totalMs  = nextEvent.time - prev.time;
+      const elapsedMs = now - prev.time;
+      const ratio    = elapsedMs / totalMs;
+      currentFt = prev.ft + (nextEvent.ft - prev.ft) * ratio;
+      rising    = nextEvent.ft > prev.ft;
+    } else if (prev) {
+      currentFt = prev.ft;
+      rising    = false;
+    }
+
+    return {
+      currentFt: currentFt != null ? Math.round(currentFt * 10) / 10 : null,
+      rising,
+      nextHigh: nextHigh ? { time: nextHigh.time.toISOString(), ft: nextHigh.ft } : null,
+      nextLow:  nextLow  ? { time: nextLow.time.toISOString(),  ft: nextLow.ft  } : null,
+    };
+  } catch (err) {
+    console.warn('NOAA tide fetch failed:', err);
+    return null;
   }
-
-  // Tidal range in feet (for context)
-  const rangeFt = mToFt(dayMax - dayMin);
-
-  return { currentFt: currentNorm, rising, nextHigh, nextLow, rangeFt };
 }
 
 function formatTideTime(isoStr) {
@@ -299,7 +331,6 @@ function tideHTML(tide) {
   const arrow      = tide.rising ? '↑' : '↓';
   const arrowColor = tide.rising ? '#0a7c5c' : '#2980b9';
   const arrowLabel = tide.rising ? 'Rising' : 'Falling';
-  const rangeStr   = tide.rangeFt != null ? `/ ${tide.rangeFt.toFixed(1)} ft range` : '';
 
   const nextHighStr = tide.nextHigh
     ? `${formatTideTime(tide.nextHigh.time)} (${tide.nextHigh.ft.toFixed(1)} ft)`
@@ -313,7 +344,6 @@ function tideHTML(tide) {
       <span class="tide-lbl">Tide</span>
       <span class="tide-val">${heightFt}</span>
       <span class="tide-arrow" style="color:${arrowColor};" title="${arrowLabel}">${arrow}</span>
-      <span class="tide-range">${rangeStr}</span>
     </div>
     <div class="tide-next">
       <span class="tide-next-item"><span class="tide-next-lbl">Next high</span> <span class="tide-next-val">${nextHighStr}</span></span>
@@ -497,10 +527,12 @@ async function runSearch() {
 
   const results = await Promise.all(nearby.map(async spot => {
     try {
-      const [wave, wind] = await Promise.all([
+      const [wave, wind, tide] = await Promise.all([
         getWaveData(spot.lat, spot.lng),
         getWindData(spot.lat, spot.lng),
+        getNOAATideData(spot.noaaStationId),
       ]);
+      wave.tide = tide;
       const { score, reasons, warnings } = scoreConditions(spot, wave, wind.speed, wave.swellDir, wind.dir);
       return { spot, wave, wind, score, reasons, warnings };
     } catch { return null; }

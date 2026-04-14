@@ -1,0 +1,66 @@
+{
+  "_comment": "Swello scoring weights and thresholds. Edit these values to tune how conditions are scored.",
+
+  "weights": {
+    "swellSize":      30,
+    "swellPeriod":    20,
+    "swellDirection": 20,
+    "windSpeed":      15,
+    "windDirection":  15
+  },
+
+  "swellSize": {
+    "pointsPerFootUnder":  10,
+    "pointsPerFootOver":    8
+  },
+
+  "swellPeriod": {
+    "goodPoints":     20,
+    "decentPoints":   11,
+    "poorPoints":      3,
+    "decentThreshold": 3
+  },
+
+  "swellDirection": {
+    "optimalDeg":  22,
+    "goodDeg":     45,
+    "fairDeg":     70,
+    "optimalPts":  20,
+    "goodPts":     14,
+    "fairPts":      6,
+    "poorPts":      0
+  },
+
+  "windSpeed": {
+    "glassyMax":        5,
+    "glassyPts":       15,
+    "tolerancePts":    10,
+    "overToleranceMult": 1.5,
+    "overTolerancePts": 4,
+    "blownOutPts":      0
+  },
+
+  "windDirection": {
+    "offshoreDeg":     22,
+    "mostlyOffshoreDeg": 45,
+    "sidesoreDeg":     90,
+    "crossOnshDeg":   135,
+    "offshorePts":    15,
+    "mostlyOffPts":   10,
+    "sideshorePts":    5,
+    "crossOnshPts":    0,
+    "onshPts":         0
+  },
+
+  "tiers": {
+    "goThreshold":    65,
+    "maybeThreshold": 38
+  },
+
+  "windDirDegrees": {
+    "N":   0,  "NNE": 22, "NE":  45, "ENE": 67,
+    "E":  90,  "ESE": 112,"SE": 135, "SSE": 157,
+    "S": 180,  "SSW": 202,"SW": 225, "WSW": 247,
+    "W": 270,  "WNW": 292,"NW": 315, "NNW": 337
+  }
+}

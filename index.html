@@ -130,7 +130,6 @@
   .tide-next-item{display:flex;align-items:center;gap:5px;font-size:0.75rem;}
   .tide-next-lbl{color:var(--mist);flex-shrink:0;}
   .tide-next-val{color:var(--dusk);font-weight:500;}
-  .tide-range{font-size:0.7rem;color:var(--mist);margin-left:2px;}
 
   /* ── DISTANCE PILL (replaces Go/Maybe badge) ── */
   .dist-pill{font-size:0.72rem;font-weight:500;color:var(--text-muted);border:1px solid rgba(0,0,0,0.12);border-radius:50px;padding:3px 10px;white-space:nowrap;flex-shrink:0;background:rgba(0,0,0,0.03);}
@@ -295,8 +294,7 @@
 
 <footer>© 2026 Swello · Powered by Open-Meteo Marine API · Built for wave seekers everywhere</footer>
 
-<!-- ── SCRIPTS (order matters: spots → scoring → app) ───────────────────────── -->
-<script src="spots.js"></script>
+<!-- ── SCRIPTS (order matters: scoring → app; spots.json + scoring-config.json fetched at runtime) ── -->
 <script src="scoring.js"></script>
 <script src="app.js"></script>
 

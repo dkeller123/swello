@@ -46,8 +46,8 @@ function scoreConditions(spot, wave, windSpeedMph, swellDirDeg, windDirDeg) {
   let score    = 0;
   const reasons  = [];
   const warnings = [];
-  const swellFt  = mToFt(wave.swellHeight || wave.waveHeight);
-  const period   = wave.swellPeriod;
+  const swellFt  = wave.swellHsFt;   // groundswell height in feet
+  const period   = wave.swellPeriod; // seconds
 
   // ── 1. SWELL SIZE ─────────────────────────────────────────────────────────
   if (swellFt != null) {

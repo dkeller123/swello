@@ -181,32 +181,41 @@ function mToFt(m) { return m == null ? null : m * 3.281; }
 // ── API CALLS ─────────────────────────────────────────────────────────────────
 
 async function getWaveData(lat, lng) {
-  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=wave_height,swell_wave_height,swell_wave_period,swell_wave_direction&forecast_days=1&timezone=auto`;
+  // wave_height      = significant wave height (Hs) — total sea state — METERS
+  // swell_wave_height = swell component only (long-period groundswell) — METERS
+  // swell_wave_period = dominant swell period — SECONDS
+  // swell_wave_direction = swell direction in degrees (where it's coming FROM)
+  const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}` +
+    `&hourly=wave_height,swell_wave_height,swell_wave_period,swell_wave_direction` +
+    `&forecast_days=1&timezone=auto`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('no_marine');
   const d   = await res.json();
   const idx = Math.min(new Date().getHours(), (d.hourly?.time?.length || 1) - 1);
 
-  const waveHeightM  = d.hourly?.wave_height?.[idx] ?? null;
-  const waveHeightFt = mToFt(waveHeightM);
+  // Convert everything to feet immediately — all downstream code works in feet
+  const totalHsFt  = mToFt(d.hourly?.wave_height?.[idx]       ?? null); // total sea state
+  const swellHsFt  = mToFt(d.hourly?.swell_wave_height?.[idx] ?? null); // groundswell only
+  const swellPeriod = d.hourly?.swell_wave_period?.[idx]      ?? null;  // seconds
+  const swellDir    = d.hourly?.swell_wave_direction?.[idx]   ?? null;  // degrees
 
-  // Surf height range from significant wave height
-  // Low end = ~50% of sig wave height (lulls), high end = ~85% (better sets)
-  // Add + if high end >= 5ft, meaning overhead+ sets are possible
+  // Surf height range — derived from total significant wave height (Hs)
+  // Low end ≈ 60% of Hs (lulls), high end ≈ 110% of Hs (better sets)
+  // + sign when high end ≥ 5ft (overhead+ sets are possible)
   let surfRange = null;
-  if (waveHeightFt != null) {
-    const lo  = Math.max(1, Math.round(waveHeightFt * 0.5));
-    const hi  = Math.round(waveHeightFt * 0.85);
+  if (totalHsFt != null) {
+    const lo   = Math.max(1, Math.round(totalHsFt * 0.6));
+    const hi   = Math.round(totalHsFt * 1.1);
     const plus = hi >= 5;
     surfRange = { lo, hi, plus };
   }
 
   return {
-    waveHeight:  waveHeightFt,
-    swellHeight: mToFt(d.hourly?.swell_wave_height?.[idx] ?? null),
-    swellPeriod: d.hourly?.swell_wave_period?.[idx]    ?? null,
-    swellDir:    d.hourly?.swell_wave_direction?.[idx] ?? null,
-    surfRange,
+    totalHsFt,   // total significant wave height in feet (used for surf range)
+    swellHsFt,   // groundswell height in feet (shown as "Swell" on card)
+    swellPeriod, // seconds
+    swellDir,    // degrees
+    surfRange,   // { lo, hi, plus }
   };
 }
 
@@ -371,9 +380,9 @@ function tideHTML(tide) {
 // ── CARD RENDERING ────────────────────────────────────────────────────────────
 
 function renderCard(spot, wave, wind, matchScore, reasons, warnings) {
-  const swellFt   = mToFt(wave.swellHeight ?? wave.waveHeight);
+  const swellFt   = wave.swellHsFt;
   const tier      = tierFromScore(matchScore);
-  const verdict   = verdictText(spot, matchScore, reasons, warnings, swellFt, wave.swellPeriod, wind.speed);
+  const verdict   = verdictText(spot, matchScore, reasons, warnings, wave.swellHsFt, wave.swellPeriod, wind.speed);
   const verdictCls = tier === 'best' ? 'verdict-good' : tier === 'avg' ? 'verdict-fair' : 'verdict-poor';
 
   // Skill colors
@@ -418,7 +427,7 @@ function renderCard(spot, wave, wind, matchScore, reasons, warnings) {
           <div class="stat-lbl">Swell</div>
           <div class="stat-val-line">
             <span class="stat-val-big">${swellFt != null ? swellFt.toFixed(1) : '—'}</span>
-            <span class="stat-unit">feet</span>
+            <span class="stat-unit">ft</span>
           </div>
           <div class="stat-sub">${swellDirLabel}</div>
         </div>

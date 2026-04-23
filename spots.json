@@ -1275,23 +1275,6 @@
     "noaaStationId": "9410660"
   },
   {
-    "name": "Las Tunas Beach",
-    "lat": 34.025,
-    "lng": -118.742,
-    "region": "Malibu, CA",
-    "breakType": "reef",
-    "skill": "intermediate",
-    "idealSwellDir": 225,
-    "idealSwellDirLabel": "SW",
-    "idealSizeMin": 2,
-    "idealSizeMax": 6,
-    "idealPeriodMin": 10,
-    "windTolerance": 12,
-    "idealWindLabel": "NE (offshore)",
-    "notes": "Reef break between Malibu and Topanga. Rocky bottom creates consistent peaks on SW swell. Limited parking on PCH. Less crowded than Malibu or Topanga. Fun mid-tide option.",
-    "noaaStationId": "9410660"
-  },
-  {
     "name": "Topanga Beach",
     "lat": 34.033,
     "lng": -118.6,

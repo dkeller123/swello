@@ -186,11 +186,27 @@ async function getWaveData(lat, lng) {
   if (!res.ok) throw new Error('no_marine');
   const d   = await res.json();
   const idx = Math.min(new Date().getHours(), (d.hourly?.time?.length || 1) - 1);
+
+  const waveHeightM  = d.hourly?.wave_height?.[idx] ?? null;
+  const waveHeightFt = mToFt(waveHeightM);
+
+  // Surf height range from significant wave height
+  // Low end = ~50% of sig wave height (lulls), high end = ~85% (better sets)
+  // Add + if high end >= 5ft, meaning overhead+ sets are possible
+  let surfRange = null;
+  if (waveHeightFt != null) {
+    const lo  = Math.max(1, Math.round(waveHeightFt * 0.5));
+    const hi  = Math.round(waveHeightFt * 0.85);
+    const plus = hi >= 5;
+    surfRange = { lo, hi, plus };
+  }
+
   return {
-    waveHeight:  d.hourly?.wave_height?.[idx]          ?? null,
-    swellHeight: d.hourly?.swell_wave_height?.[idx]    ?? null,
+    waveHeight:  waveHeightFt,
+    swellHeight: mToFt(d.hourly?.swell_wave_height?.[idx] ?? null),
     swellPeriod: d.hourly?.swell_wave_period?.[idx]    ?? null,
     swellDir:    d.hourly?.swell_wave_direction?.[idx] ?? null,
+    surfRange,
   };
 }
 
@@ -382,8 +398,20 @@ function renderCard(spot, wave, wind, matchScore, reasons, warnings) {
         ${distDisplay ? `<div class="dist-pill">${distDisplay}</div>` : ''}
       </div>
 
-      <!-- STATS: SWELL | PERIOD | WIND -->
+      <!-- STATS: SURF | SWELL | PERIOD | WIND -->
       <div class="stats-row">
+
+        <!-- Surf height range -->
+        <div class="stat-block">
+          <div class="stat-lbl">Surf</div>
+          <div class="stat-val-line">
+            <span class="stat-val-big">${wave.surfRange ? `${wave.surfRange.lo}-${wave.surfRange.hi}${wave.surfRange.plus ? '+' : ''}` : '—'}</span>
+          </div>
+          <div class="stat-unit" style="text-align:center;">ft</div>
+          <div class="stat-sub">&nbsp;</div>
+        </div>
+
+        <div class="stat-divider"></div>
 
         <!-- Swell height + direction -->
         <div class="stat-block">
